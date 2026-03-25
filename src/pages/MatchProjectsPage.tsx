@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, Button, Card, Descriptions, Space, Table, Typography } from 'antd'
+import { Alert, Button, Card, Space, Table, Tag, Typography } from 'antd'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../app/useAuth'
@@ -9,12 +9,12 @@ type Rule = {
   countryMode: number
   countries: string[]
   ageMin: number
-  ageMax: number
   allowedMan: boolean
   allowedWoman: boolean
 }
 
 type RuleData = {
+  policyId: number
   projectName: string
   owner: string
   website: string
@@ -22,12 +22,16 @@ type RuleData = {
 }
 
 type MatchResponse = { data: RuleData[] }
+type TagsResponse = { tags: Record<string, boolean> }
 
 export default function MatchProjectsPage() {
   const { auth } = useAuth()
   const [error, setError] = useState('')
   const [result, setResult] = useState<MatchResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const [tagsByPolicyId, setTagsByPolicyId] = useState<
+    Record<number, { loading: boolean; error: string; tags: Record<string, boolean> | null }>
+  >({})
 
   async function load() {
     setError('')
@@ -44,6 +48,26 @@ export default function MatchProjectsPage() {
     }
   }
 
+  async function loadTags(policyId: number) {
+    const username = auth.subject || ''
+    if (!username || !policyId) return
+    setTagsByPolicyId((prev) => ({
+      ...prev,
+      [policyId]: { loading: true, error: '', tags: prev[policyId]?.tags ?? null },
+    }))
+    try {
+      const data = await apiRequest<TagsResponse>(
+        `/api/match/users/${encodeURIComponent(username)}/projects/${policyId}/tags`,
+      )
+      setTagsByPolicyId((prev) => ({ ...prev, [policyId]: { loading: false, error: '', tags: data.tags || {} } }))
+    } catch (err) {
+      setTagsByPolicyId((prev) => ({
+        ...prev,
+        [policyId]: { loading: false, error: err instanceof Error ? err.message : '查询失败', tags: null },
+      }))
+    }
+  }
+
   useEffect(() => {
     if (auth.subject) void load()
   }, [auth.subject])
@@ -53,53 +77,79 @@ export default function MatchProjectsPage() {
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <div>
           <Typography.Title level={3} style={{ marginBottom: 0 }}>
-            查询用户匹配项目
+            查询自己匹配的策略
           </Typography.Title>
-          <Typography.Text type="secondary">使用当前登录用户名，展示可匹配的项目。</Typography.Text>
+          <Typography.Text type="secondary">使用当前登录用户名，展示可匹配的策略。</Typography.Text>
         </div>
 
         {error ? <Alert type="error" showIcon message={error} /> : null}
 
-        <Descriptions bordered size="small" column={1}>
-          <Descriptions.Item label="当前用户">{auth.subject || '-'}</Descriptions.Item>
-        </Descriptions>
-
-        <Button onClick={() => void load()} loading={loading} disabled={!auth.subject}>
-          刷新
-        </Button>
-
         {result ? (
           <Table
             size="small"
-            rowKey={(r) => r.projectName}
+            rowKey={(r) => r.policyId || r.projectName}
             pagination={false}
             dataSource={result.data || []}
             columns={[
-              { title: 'Project', dataIndex: 'projectName' },
+              { title: 'Policy ID', dataIndex: 'policyId' },
+              { title: 'Policy', dataIndex: 'projectName' },
               { title: 'Owner', dataIndex: 'owner' },
               {
-                title: 'Website',
-                dataIndex: 'website',
-                render: (v?: string) =>
-                  v ? (
-                    <a href={v} target="_blank" rel="noreferrer">
-                      {v}
-                    </a>
-                  ) : (
-                    '-'
-                  ),
+                title: 'Tags',
+                render: (_, r) => {
+                  const st = tagsByPolicyId[r.policyId]
+                  const tags = st?.tags
+                  if (!st) {
+                    return (
+                      <Button size="small" onClick={() => void loadTags(r.policyId)} disabled={!auth.subject}>
+                        加载
+                      </Button>
+                    )
+                  }
+                  if (st.loading) return <Typography.Text type="secondary">加载中...</Typography.Text>
+                  if (st.error) return <Typography.Text type="danger">{st.error}</Typography.Text>
+                  if (!tags || Object.keys(tags).length === 0) return '-'
+                  return (
+                    <Space size={4} wrap>
+                      {Object.entries(tags).map(([k, v]) => (
+                        <Tag key={k} color={v ? 'green' : 'red'}>
+                          {k}:{String(v)}
+                        </Tag>
+                      ))}
+                    </Space>
+                  )
+                },
+              },
+              {
+                title: 'Rules',
+                dataIndex: 'rules',
+                render: (v: Rule) => (
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {JSON.stringify(v, null, 2)}
+                  </pre>
+                ),
               },
               {
                 title: '操作',
                 render: (_, r) => (
                   <Space>
-                    <Link to={`/projects/rules/query-by-name?name=${encodeURIComponent(r.projectName)}`}>查看规则</Link>
+                    <Link
+                      to={`/match/tags?username=${encodeURIComponent(auth.subject || '')}&projectId=${encodeURIComponent(
+                        String(r.policyId),
+                      )}`}
+                    >
+                      标签详情
+                    </Link>
                   </Space>
                 ),
               },
             ]}
           />
         ) : null}
+
+        <Button onClick={() => void load()} loading={loading} disabled={!auth.subject}>
+          刷新
+        </Button>
       </Space>
     </Card>
   )

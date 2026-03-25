@@ -9,6 +9,7 @@ import {
   LogoutOutlined,
   LoginOutlined,
   SafetyCertificateOutlined,
+  SettingOutlined,
   TagsOutlined,
   UnorderedListOutlined,
   UserAddOutlined,
@@ -45,19 +46,31 @@ export default function AppShell() {
       children?: MenuItem[],
     ): MenuItem => ({ key, icon, label, children })
 
+    const kycChildren: MenuItem[] =
+      auth.role === 'user'
+        ? [
+            item(<Link to="/kyc/submit">提交KYC</Link>, '/kyc/submit', <IdcardOutlined />),
+            item(<Link to="/match/projects">查询匹配策略</Link>, '/match/projects', <FileSearchOutlined />),
+          ]
+        : auth.role === 'admin' || auth.role === 'project'
+          ? [item(<Link to="/users/kyc/query">查询用户KYC</Link>, '/users/kyc/query', <FileSearchOutlined />)]
+          : []
+
+    const projectChildren: MenuItem[] = [
+      ...(auth.role === 'admin' || auth.role === 'super_admin' || auth.role === 'project'
+        ? [item(<Link to="/projects/rules/create">创建规则</Link>, '/projects/rules/create', <UnorderedListOutlined />)]
+        : []),
+      item(<Link to="/projects/rules/list">规则列表</Link>, '/projects/rules/list', <UnorderedListOutlined />),
+      item(<Link to="/projects/rules/query">查询规则</Link>, '/projects/rules/query', <FileSearchOutlined />),
+      item(<Link to="/projects/rules/query-by-name">按名称查询</Link>, '/projects/rules/query-by-name', <FileSearchOutlined />),
+      item(<Link to="/projects/search">搜索项目</Link>, '/projects/search', <FileSearchOutlined />),
+    ]
+
     const base: MenuItemWithKey[] = [
       item(<Link to="/">概览</Link>, '/', <HomeOutlined />) as MenuItemWithKey,
-      item('KYC', 'kyc', <SafetyCertificateOutlined />, [
-        item(<Link to="/kyc/submit">提交KYC</Link>, '/kyc/submit', <IdcardOutlined />),
-        item(<Link to="/users/kyc/query">查询用户KYC</Link>, '/users/kyc/query', <FileSearchOutlined />),
-      ]) as MenuItemWithKey,
-      item('项目规则', 'project', <UnorderedListOutlined />, [
-        item(<Link to="/projects/rules/create">创建规则</Link>, '/projects/rules/create', <UnorderedListOutlined />),
-        item(<Link to="/projects/rules/list">规则列表</Link>, '/projects/rules/list', <UnorderedListOutlined />),
-        item(<Link to="/projects/rules/query">查询规则</Link>, '/projects/rules/query', <FileSearchOutlined />),
-        item(<Link to="/projects/rules/query-by-name">按名称查询</Link>, '/projects/rules/query-by-name', <FileSearchOutlined />),
-        item(<Link to="/projects/search">搜索项目</Link>, '/projects/search', <FileSearchOutlined />),
-      ]) as MenuItemWithKey,
+      item(<Link to="/admin">超级管理员</Link>, '/admin', <SettingOutlined />) as MenuItemWithKey,
+      item('KYC', 'kyc', <SafetyCertificateOutlined />, kycChildren) as MenuItemWithKey,
+      item('项目规则', 'project', <UnorderedListOutlined />, projectChildren) as MenuItemWithKey,
       item('匹配', 'match', <TagsOutlined />, [
         item(<Link to="/match/projects">匹配项目</Link>, '/match/projects', <UnorderedListOutlined />),
         item(<Link to="/match/tags">标签详情</Link>, '/match/tags', <TagsOutlined />),
@@ -78,6 +91,7 @@ export default function AppShell() {
         item('注册', 'register', <UserAddOutlined />, [
           item(<Link to="/register/user">普通用户</Link>, '/register/user', <UserOutlined />),
           item(<Link to="/register/project">项目方</Link>, '/register/project', <UnorderedListOutlined />),
+          item(<Link to="/register/admin">管理员</Link>, '/register/admin', <SettingOutlined />),
         ]),
         item(
           <a href="/docs" target="_blank" rel="noreferrer">
@@ -97,7 +111,18 @@ export default function AppShell() {
       return base.filter((i) => i.key === '/' || i.key === 'kyc' || i.key === 'match' || i.key === 'api')
     }
 
-    return base
+    if (auth.role === 'admin') {
+      return base
+    }
+
+    if (auth.role === 'super_admin') {
+      return [
+        item(<Link to="/admin">审批</Link>, '/admin', <SettingOutlined />),
+        item(<Link to="/projects/rules/create">提交规则</Link>, '/projects/rules/create', <UnorderedListOutlined />),
+      ]
+    }
+
+    return base.filter((i) => i.key !== '/admin')
   }, [auth.role, auth.token])
 
   const selectedKeys = useMemo(() => {

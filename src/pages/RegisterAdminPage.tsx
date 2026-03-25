@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Alert, Button, Card, Form, Input, Space, Typography } from 'antd'
 
 import { apiRequest } from '../lib/api'
 
 type RegisterResponse = { registered: boolean; role: string }
 
-export default function RegisterUserPage() {
-  const navigate = useNavigate()
+export default function RegisterAdminPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [ok, setOk] = useState(false)
@@ -16,12 +15,11 @@ export default function RegisterUserPage() {
     setError('')
     setLoading(true)
     try {
-      await apiRequest<RegisterResponse>('/register/user', {
+      await apiRequest<RegisterResponse>('/register/admin', {
         method: 'POST',
-        body: JSON.stringify(values),
+        body: JSON.stringify({ username: values.username, password: values.password }),
       })
       setOk(true)
-      setTimeout(() => navigate('/login'), 300)
     } catch (err) {
       setError(err instanceof Error ? err.message : '注册失败')
     } finally {
@@ -34,32 +32,26 @@ export default function RegisterUserPage() {
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <div>
           <Typography.Title level={3} style={{ marginBottom: 0 }}>
-            注册普通用户
+            注册管理员账号
           </Typography.Title>
-          <Typography.Text type="secondary">普通用户注册完成后可直接登录；项目方需超级管理员审批</Typography.Text>
+          <Typography.Text type="secondary">注册提交后需超级管理员审批，通过后再登录使用</Typography.Text>
         </div>
 
-        {ok ? <Alert type="success" showIcon message="注册成功，正在跳转登录..." /> : null}
+        {ok ? (
+          <Alert
+            type="success"
+            showIcon
+            message="提交成功"
+            description="请等待超级管理员审批通过后再登录使用"
+          />
+        ) : null}
         {error ? <Alert type="error" showIcon message={error} /> : null}
 
-        <Form
-          layout="vertical"
-          onFinish={onFinish}
-          requiredMark={false}
-          disabled={loading}
-        >
-          <Form.Item
-            label="用户名"
-            name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
-            <Input placeholder="u1" />
+        <Form layout="vertical" onFinish={onFinish} requiredMark={false} disabled={loading}>
+          <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+            <Input placeholder="admin1" />
           </Form.Item>
-          <Form.Item
-            label="密码"
-            name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
-          >
+          <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码' }]}>
             <Input.Password placeholder="p1" />
           </Form.Item>
           <Button type="primary" htmlType="submit" loading={loading} block>
@@ -68,7 +60,8 @@ export default function RegisterUserPage() {
         </Form>
 
         <Space direction="vertical" style={{ width: '100%' }}>
-          <Link to="/login">去登录</Link>
+          <Link to="/login">返回登录</Link>
+          <Link to="/register/user">注册普通用户</Link>
           <Link to="/register/project">注册项目方</Link>
         </Space>
       </Space>

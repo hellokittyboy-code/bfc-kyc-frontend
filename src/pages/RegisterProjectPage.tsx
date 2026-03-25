@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Alert, Button, Card, Form, Input, Space, Typography } from 'antd'
 
 import { apiRequest } from '../lib/api'
@@ -7,7 +7,6 @@ import { apiRequest } from '../lib/api'
 type RegisterResponse = { registered: boolean; role: string }
 
 export default function RegisterProjectPage() {
-  const navigate = useNavigate()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [ok, setOk] = useState(false)
@@ -21,7 +20,6 @@ export default function RegisterProjectPage() {
         body: JSON.stringify(values),
       })
       setOk(true)
-      setTimeout(() => navigate('/login'), 300)
     } catch (err) {
       setError(err instanceof Error ? err.message : '注册失败')
     } finally {
@@ -36,10 +34,17 @@ export default function RegisterProjectPage() {
           <Typography.Title level={3} style={{ marginBottom: 0 }}>
             注册项目方账号
           </Typography.Title>
-          <Typography.Text type="secondary">注册完成后跳转到登录页</Typography.Text>
+          <Typography.Text type="secondary">注册提交后需超级管理员审批，通过后再登录使用</Typography.Text>
         </div>
 
-        {ok ? <Alert type="success" showIcon message="注册成功，正在跳转登录..." /> : null}
+        {ok ? (
+          <Alert
+            type="success"
+            showIcon
+            message="提交成功"
+            description="请等待超级管理员审批通过后再登录使用"
+          />
+        ) : null}
         {error ? <Alert type="error" showIcon message={error} /> : null}
 
         <Form
@@ -68,7 +73,7 @@ export default function RegisterProjectPage() {
         </Form>
 
         <Space direction="vertical" style={{ width: '100%' }}>
-          <Link to="/login">去登录</Link>
+          <Link to="/login">返回登录</Link>
           <Link to="/register/user">注册普通用户</Link>
         </Space>
       </Space>

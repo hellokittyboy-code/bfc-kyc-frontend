@@ -48,9 +48,7 @@ export default function LoginPage() {
           <Typography.Title level={3} style={{ marginBottom: 0 }}>
             登录
           </Typography.Title>
-          <Typography.Text type="secondary">
-            默认 super_admin：用户名 admin，密码 admin
-          </Typography.Text>
+          <Typography.Text type="secondary">默认管理员：用户名 admin，密码 admin</Typography.Text>
         </div>
 
         {error ? <Alert type="error" showIcon message={error} /> : null}

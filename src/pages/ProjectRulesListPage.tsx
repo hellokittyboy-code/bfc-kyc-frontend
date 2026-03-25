@@ -9,7 +9,6 @@ type Rule = {
   countryMode: number
   countries: string[]
   ageMin: number
-  ageMax: number
   allowedMan: boolean
   allowedWoman: boolean
 }
@@ -37,6 +36,12 @@ function formatAllowedGenders(rule?: Rule) {
   if (rule?.allowedMan) items.push('男')
   if (rule?.allowedWoman) items.push('女')
   return items.join(', ') || '-'
+}
+
+function formatAge(rule?: Rule) {
+  const min = Number(rule?.ageMin ?? 0)
+  if (!min) return '-'
+  return `>= ${min}`
 }
 
 export default function ProjectRulesListPage() {
@@ -89,7 +94,7 @@ export default function ProjectRulesListPage() {
       },
       {
         title: 'age',
-        render: (_, r) => `${Number(r.rules?.ageMin ?? 0)} ~ ${Number(r.rules?.ageMax ?? 0)}`,
+        render: (_, r) => formatAge(r.rules),
         width: 140,
       },
       {
